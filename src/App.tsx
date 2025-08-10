@@ -17,6 +17,10 @@ import {
   FormControlLabel,
   TextField,
   InputAdornment,
+  Card,
+  CardContent,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { lightTheme, darkTheme } from "./theme";
@@ -43,8 +47,14 @@ const heroesSeed: Hero[] = [
   },
 ];
 
-// Enhanced aanking number component
-const RankingNumber = ({ rank }: { rank: number }) => {
+// Enhanced ranking number component
+const RankingNumber = ({
+  rank,
+  size = "normal",
+}: {
+  rank: number;
+  size?: "normal" | "small";
+}) => {
   const getRankStyle = (position: number) => {
     if (position === 1) {
       return {
@@ -86,18 +96,20 @@ const RankingNumber = ({ rank }: { rank: number }) => {
   };
 
   const rankStyle = getRankStyle(rank);
+  const dimensions =
+    size === "small"
+      ? { width: 36, height: 36, fontSize: 16 }
+      : { width: 44, height: 44, fontSize: 18 };
 
   return (
     <Box
       sx={{
-        width: 44,
-        height: 44,
+        ...dimensions,
         borderRadius: 2,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontWeight: 900,
-        fontSize: 18,
         position: "relative",
         transition: "all 200ms ease",
         "&:hover": {
@@ -112,11 +124,122 @@ const RankingNumber = ({ rank }: { rank: number }) => {
   );
 };
 
+// Mobile card component for hero display
+const HeroCard = ({
+  hero,
+  rank,
+}: {
+  hero: Hero & { total: number; originalRank?: number };
+  rank: number;
+}) => {
+  const actualRank = hero.originalRank || rank;
+
+  return (
+    <Card
+      sx={{
+        mb: 2,
+        background:
+          actualRank === 1
+            ? "linear-gradient(135deg, rgba(255,215,0,0.12), rgba(0,0,0,0.6))"
+            : actualRank === 2
+            ? "linear-gradient(135deg, rgba(192,192,192,0.12), rgba(0,0,0,0.6))"
+            : actualRank === 3
+            ? "linear-gradient(135deg, rgba(205,127,50,0.12), rgba(0,0,0,0.6))"
+            : "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.55))",
+        border: "1px solid rgba(255,255,255,0.1)",
+        transition: "transform 180ms ease",
+        "&:hover": {
+          transform: "translateY(-2px)",
+          boxShadow: "0 8px 25px rgba(0,0,0,0.6)",
+        },
+      }}
+    >
+      <CardContent sx={{ p: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <RankingNumber rank={actualRank as number} size="small" />
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              background: "linear-gradient(180deg,#d6d6d6,#9a9a9a)",
+              color: "#111",
+              boxShadow: "inset 0 2px 6px rgba(0,0,0,0.5)",
+              fontSize: 18,
+            }}
+          >
+            {hero.name[0]}
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "#fff" }}>
+              {hero.name}
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 900,
+                letterSpacing: 1.2,
+                color:
+                  actualRank === 1
+                    ? "#FFD700"
+                    : actualRank === 2
+                    ? "#C0C0C0"
+                    : actualRank === 3
+                    ? "#CD7F32"
+                    : "#ffd9d9",
+              }}
+            >
+              {hero.total} KG
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Records breakdown */}
+        <Box
+          sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1 }}
+        >
+          {hero.Records.map((record) => (
+            <Box
+              key={record.type}
+              sx={{
+                textAlign: "center",
+                p: 1,
+                borderRadius: 1,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.7rem" }}
+              >
+                {record.type}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, color: "#fff", fontSize: "0.9rem" }}
+              >
+                {record.value}kg
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
 const computeTotal = (h: Hero) => h.Records.reduce((s, r) => s + r.value, 0);
 
 const App: React.FC = () => {
   const [heroes] = useState<Hero[]>(heroesSeed);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const ranked = useMemo(
     () =>
@@ -146,11 +269,12 @@ const App: React.FC = () => {
         sx={{
           minHeight: "100vh",
           width: "100%",
-          p: 4,
+          p: isMobile ? 2 : 4,
           boxSizing: "border-box",
           backgroundImage: `url(${process.env.PUBLIC_URL}/images/gymbackground.jpg)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          backgroundAttachment: isMobile ? "scroll" : "fixed",
           display: "flex",
           justifyContent: "center",
           alignItems: "flex-start",
@@ -161,23 +285,41 @@ const App: React.FC = () => {
             display: "flex",
             alignItems: "center",
             flexDirection: "column",
-            gap: 6,
+            gap: isMobile ? 3 : 6,
             width: "100%",
             maxWidth: 960,
           }}
         >
-          <Box sx={{ position: "relative" }}>
-            <img src={`${process.env.PUBLIC_URL}/images/fireTitle.gif`} />
+          {/* Title Image - Responsive */}
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              maxWidth: isMobile ? "100%" : "600px",
+              textAlign: "center",
+            }}
+          >
+            <img
+              src={`${process.env.PUBLIC_URL}/images/fireTitle.gif`}
+              alt="Powerlifting Leaderboard"
+              style={{
+                width: "100%",
+                height: "auto",
+                maxHeight: isMobile ? "120px" : "200px",
+                objectFit: "contain",
+              }}
+            />
           </Box>
 
           {/* Search Box */}
-          <Box sx={{ width: "100%", maxWidth: 500, mb: 2 }}>
+          <Box sx={{ width: "100%", maxWidth: isMobile ? "100%" : 500, mb: 2 }}>
             <TextField
               fullWidth
               variant="outlined"
               placeholder="Search heroes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              size={isMobile ? "small" : "medium"}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -208,148 +350,167 @@ const App: React.FC = () => {
             />
           </Box>
 
-          <TableContainer
-            component={Paper}
-            elevation={6}
-            sx={{
-              borderRadius: 3,
-              overflow: "visible",
-              position: "relative",
-              background: "rgba(10,10,10,0.55)",
-              boxShadow: (theme) =>
-                `0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02)`,
-            }}
-          >
-            {/* Bloody overlay */}
-            <Box
+          {/* Conditional rendering based on screen size */}
+          {isMobile ? (
+            // Mobile: Card layout
+            <Box sx={{ width: "100%" }}>
+              {filteredAndRanked.map((hero, i) => (
+                <HeroCard key={hero.name} hero={hero} rank={i + 1} />
+              ))}
+            </Box>
+          ) : (
+            // Desktop: Table layout
+            <TableContainer
+              component={Paper}
+              elevation={6}
               sx={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 0,
-                pointerEvents: "none",
-                opacity: 0.25,
-                backgroundImage: `radial-gradient(circle at 10% 20%, rgba(120,0,0,0.6), transparent 10%), radial-gradient(circle at 80% 40%, rgba(90,0,0,0.5), transparent 8%)`,
-                mixBlendMode: "multiply",
+                borderRadius: 3,
+                overflow: "visible",
+                position: "relative",
+                background: "rgba(10,10,10,0.55)",
+                boxShadow: (theme) =>
+                  `0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02)`,
               }}
-            />
+            >
+              {/* Bloody overlay */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 0,
+                  pointerEvents: "none",
+                  opacity: 0.25,
+                  backgroundImage: `radial-gradient(circle at 10% 20%, rgba(120,0,0,0.6), transparent 10%), radial-gradient(circle at 80% 40%, rgba(90,0,0,0.5), transparent 8%)`,
+                  mixBlendMode: "multiply",
+                }}
+              />
 
-            <Table sx={{ minWidth: 700, position: "relative", zIndex: 1 }}>
-              <TableHead>
-                <TableRow
-                  sx={{
-                    background: "linear-gradient(90deg,#111,#1b1b1b)",
-                    borderBottom: "1px solid rgba(255,255,255,0.03)",
-                  }}
-                >
-                  <TableCell sx={{ color: "#ddd", fontWeight: 700 }}>
-                    Rank
-                  </TableCell>
-                  <TableCell sx={{ color: "#ddd", fontWeight: 700 }}>
-                    Hero
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{ color: "#ddd", fontWeight: 700 }}
+              <Table sx={{ minWidth: 700, position: "relative", zIndex: 1 }}>
+                <TableHead>
+                  <TableRow
+                    sx={{
+                      background: "linear-gradient(90deg,#111,#1b1b1b)",
+                      borderBottom: "1px solid rgba(255,255,255,0.03)",
+                    }}
                   >
-                    Total
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {filteredAndRanked.map((hero, i) => {
-                  const actualRank =
-                    "originalRank" in hero ? hero.originalRank : i + 1;
-                  return (
-                    <TableRow
-                      key={hero.name}
-                      sx={{
-                        position: "relative",
-                        background:
-                          actualRank === 1
-                            ? "linear-gradient(90deg, rgba(255,215,0,0.08), rgba(0,0,0,0.4))"
-                            : actualRank === 2
-                            ? "linear-gradient(90deg, rgba(192,192,192,0.08), rgba(0,0,0,0.4))"
-                            : actualRank === 3
-                            ? "linear-gradient(90deg, rgba(205,127,50,0.08), rgba(0,0,0,0.4))"
-                            : "linear-gradient(90deg, rgba(255,255,255,0.02), rgba(0,0,0,0.35))",
-                        borderBottom: "1px solid rgba(255,255,255,0.03)",
-                        transition: "transform 180ms ease",
-                        "&:hover": {
-                          transform: "translateY(-3px)",
-                          boxShadow: (theme) => "0 12px 40px rgba(0,0,0,0.6)",
-                        },
-                      }}
+                    <TableCell sx={{ color: "#ddd", fontWeight: 700 }}>
+                      Rank
+                    </TableCell>
+                    <TableCell sx={{ color: "#ddd", fontWeight: 700 }}>
+                      Hero
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ color: "#ddd", fontWeight: 700 }}
                     >
-                      <TableCell>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-                        >
-                          <RankingNumber rank={actualRank as number} />
-                        </Box>
-                      </TableCell>
+                      Total
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
 
-                      <TableCell>
-                        <Box
-                          sx={{ display: "flex", gap: 2, alignItems: "center" }}
-                        >
+                <TableBody>
+                  {filteredAndRanked.map((hero, i) => {
+                    const actualRank =
+                      "originalRank" in hero ? hero.originalRank : i + 1;
+                    return (
+                      <TableRow
+                        key={hero.name}
+                        sx={{
+                          position: "relative",
+                          background:
+                            actualRank === 1
+                              ? "linear-gradient(90deg, rgba(255,215,0,0.08), rgba(0,0,0,0.4))"
+                              : actualRank === 2
+                              ? "linear-gradient(90deg, rgba(192,192,192,0.08), rgba(0,0,0,0.4))"
+                              : actualRank === 3
+                              ? "linear-gradient(90deg, rgba(205,127,50,0.08), rgba(0,0,0,0.4))"
+                              : "linear-gradient(90deg, rgba(255,255,255,0.02), rgba(0,0,0,0.35))",
+                          borderBottom: "1px solid rgba(255,255,255,0.03)",
+                          transition: "transform 180ms ease",
+                          "&:hover": {
+                            transform: "translateY(-3px)",
+                            boxShadow: (theme) => "0 12px 40px rgba(0,0,0,0.6)",
+                          },
+                        }}
+                      >
+                        <TableCell>
                           <Box
                             sx={{
-                              width: 56,
-                              height: 56,
-                              borderRadius: 1,
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              fontWeight: 800,
-                              background:
-                                "linear-gradient(180deg,#d6d6d6,#9a9a9a)",
-                              color: "#111",
-                              boxShadow: "inset 0 2px 6px rgba(0,0,0,0.5)",
+                              gap: 2,
                             }}
                           >
-                            {hero.name[0]}
+                            <RankingNumber rank={actualRank as number} />
                           </Box>
-                          <Box>
-                            <Typography sx={{ fontWeight: 700 }}>
-                              {hero.name}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{ color: "rgba(255,255,255,0.6)" }}
-                            >
-                              {hero.Records.map(
-                                (r) => `${r.type} ${r.value}kg`
-                              ).join(" • ")}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
+                        </TableCell>
 
-                      <TableCell align="right">
-                        <Typography
-                          sx={{
-                            fontWeight: 900,
-                            letterSpacing: 1.2,
-                            color:
-                              actualRank === 1
-                                ? "#FFD700"
-                                : actualRank === 2
-                                ? "#C0C0C0"
-                                : actualRank === 3
-                                ? "#CD7F32"
-                                : "#ffd9d9",
-                          }}
-                        >
-                          {hero.total} KG
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 2,
+                              alignItems: "center",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 56,
+                                height: 56,
+                                borderRadius: 1,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: 800,
+                                background:
+                                  "linear-gradient(180deg,#d6d6d6,#9a9a9a)",
+                                color: "#111",
+                                boxShadow: "inset 0 2px 6px rgba(0,0,0,0.5)",
+                              }}
+                            >
+                              {hero.name[0]}
+                            </Box>
+                            <Box>
+                              <Typography sx={{ fontWeight: 700 }}>
+                                {hero.name}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "rgba(255,255,255,0.6)" }}
+                              >
+                                {hero.Records.map(
+                                  (r) => `${r.type} ${r.value}kg`
+                                ).join(" • ")}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+
+                        <TableCell align="right">
+                          <Typography
+                            sx={{
+                              fontWeight: 900,
+                              letterSpacing: 1.2,
+                              color:
+                                actualRank === 1
+                                  ? "#FFD700"
+                                  : actualRank === 2
+                                  ? "#C0C0C0"
+                                  : actualRank === 3
+                                  ? "#CD7F32"
+                                  : "#ffd9d9",
+                            }}
+                          >
+                            {hero.total} KG
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </Box>
       </Box>
     </ThemeProvider>
